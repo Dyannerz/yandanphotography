@@ -698,25 +698,19 @@ const moveToSection = (section) => {
                 return calculateZToFitText(4);
             }
             if (section === 'contact') {
-                const contactWallZ = 0;
-
-                // ✅ Responsive z distance based on screen width
                 const zDist = (() => {
-                    if (window.innerWidth < 500) return -2;   // phones
-                    if (window.innerWidth < 800) return -1;   // tablets
-                    return 5;                                // desktops
+                    if (window.innerWidth < 500) return -2;
+                    if (window.innerWidth < 800) return -1;
+                    return 5;
                 })();
-
-                const finalZ = zDist; // 👈 move in front of wall
-                console.log("[Contact] Camera Z:", finalZ);
-                return finalZ;
+                return zDist;
             }
             return sections[section].position[2];
         })(),
         duration: 1.5,
         ease: "power2.inOut"
     });
-    
+
     gsap.to(camera.rotation, {
         x: sections[section].rotation[0],
         y: sections[section].rotation[1],
@@ -724,7 +718,8 @@ const moveToSection = (section) => {
         duration: 1.5,
         ease: "power2.inOut"
     });
-    
+
+    // About section text animation
     if (aboutTextMesh) {
         const show = section === 'about';
         const yTarget = show ? 3.5 : aboutHideY.title;
@@ -748,7 +743,17 @@ const moveToSection = (section) => {
             });
         }
     }
-    updateDropdownVisibility();
+
+    // ✅ Handle mobile dropdown visibility
+    const shouldUseDropdown = () => {
+        return window.innerWidth < 600 && section !== 'center';
+    };
+
+    if (shouldUseDropdown()) {
+        document.body.classList.add('show-dropdown');
+    } else {
+        document.body.classList.remove('show-dropdown');
+    }
 };
 
 // Add home button click handler
@@ -776,16 +781,18 @@ window.addEventListener('wheel', handleScroll);
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 
+
 window.addEventListener('click', (e) => {
     if (currentSection === 'center') return;
 
-    // Prevent clicks when interacting with UI elements (e.g. buttons, modal)
     const clickedEl = e.target;
     if (
         clickedEl.closest('.nav-buttons') ||
         clickedEl.closest('#photo-modal') ||
         clickedEl.classList.contains('close-modal') ||
-        clickedEl.closest('#center-ui')
+        clickedEl.closest('#center-ui') ||
+        clickedEl.closest('.nav-dropdown') || // ✅ mobile dropdown
+        clickedEl.closest('.custom-dropdown')
     ) return;
 
     // Proceed with raycasting
@@ -809,18 +816,17 @@ window.addEventListener('click', (e) => {
 window.addEventListener('touchend', (e) => {
     if (currentSection === 'center') return;
 
+    const clickedEl = e.target;
+    if (
+        clickedEl.closest('.nav-buttons') ||
+        clickedEl.closest('#photo-modal') ||
+        clickedEl.classList.contains('close-modal') ||
+        clickedEl.closest('#center-ui') ||
+        clickedEl.closest('.nav-dropdown') ||
+        clickedEl.closest('.custom-dropdown')
+    ) return;
+
     const touch = e.changedTouches[0];
-    const touchEndY = touch.clientY;
-    const timeDiff = Date.now() - touchStartTime;
-
-    const deltaY = Math.abs(touchEndY - touchStartY);
-
-    // Consider it a tap only if:
-    const isTap = deltaY < 10 && timeDiff < 300;
-
-    if (!isTap) return; // skip if it's a scroll
-
-    // Proceed with raycasting for taps
     mouse.x = (touch.clientX / window.innerWidth) * 2 - 1;
     mouse.y = -(touch.clientY / window.innerHeight) * 2 + 1;
 
