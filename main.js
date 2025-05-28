@@ -8,6 +8,9 @@
 // movement
 // import { OrbitControls } from './assets/OrbitControls.js';
 
+let touchStartY = null;
+let touchStartTime = null;
+
 const scene = new THREE.Scene();
 // Black Bg
 scene.background = new THREE.Color(0x000000);
@@ -36,7 +39,9 @@ let lastTouchY = null;
 
 window.addEventListener('touchstart', (e) => {
     if (e.touches.length === 1) {
-        lastTouchY = e.touches[0].clientY;
+        touchStartY = e.touches[0].clientY;
+        touchStartTime = Date.now();
+        lastTouchY = touchStartY;
     }
 }, { passive: true });
 
@@ -805,6 +810,17 @@ window.addEventListener('touchend', (e) => {
     if (currentSection === 'center') return;
 
     const touch = e.changedTouches[0];
+    const touchEndY = touch.clientY;
+    const timeDiff = Date.now() - touchStartTime;
+
+    const deltaY = Math.abs(touchEndY - touchStartY);
+
+    // Consider it a tap only if:
+    const isTap = deltaY < 10 && timeDiff < 300;
+
+    if (!isTap) return; // skip if it's a scroll
+
+    // Proceed with raycasting for taps
     mouse.x = (touch.clientX / window.innerWidth) * 2 - 1;
     mouse.y = -(touch.clientY / window.innerHeight) * 2 + 1;
 
