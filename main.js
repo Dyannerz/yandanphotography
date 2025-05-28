@@ -32,6 +32,35 @@ function calculateXToFitFullFrame(photoWidth, photoHeight, minDistance = 12) {
     return Math.max(xForWidth, xForHeight, minDistance);
 }
 
+let lastTouchY = null;
+
+window.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 1) {
+        lastTouchY = e.touches[0].clientY;
+    }
+}, { passive: true });
+
+window.addEventListener('touchmove', (e) => {
+    if (!allowScrolling || lastTouchY === null) return;
+
+    const currentY = e.touches[0].clientY;
+    const deltaY = currentY - lastTouchY;
+
+    // Reverse touch scroll: swipe up = scroll up (normal is swipe up = scroll down)
+    scrollPosition += deltaY * 0.02;
+
+    if (currentSection === 'sports' || currentSection === 'other') {
+        scrollPosition = Math.max(-maxScroll[currentSection] - 1, Math.min(3, scrollPosition));
+    }
+
+    camera.position.y = sections[currentSection].position[1] + scrollPosition;
+
+    lastTouchY = currentY;
+}, { passive: false });
+
+window.addEventListener('touchend', () => {
+    lastTouchY = null;
+});
 
 function calculateXToFitWall(photoHalfWidth) {
     const aspect = window.innerWidth / window.innerHeight;
@@ -714,6 +743,7 @@ const moveToSection = (section) => {
             });
         }
     }
+    updateDropdownVisibility();
 };
 
 // Add home button click handler
@@ -768,6 +798,27 @@ window.addEventListener('click', (e) => {
         document.getElementById('photo-description').textContent = photo.description;
         document.getElementById('photo-modal').classList.add('visible');
     }
+    updateDropdownVisibility();
+});
+
+window.addEventListener('touchend', (e) => {
+    if (currentSection === 'center') return;
+
+    const touch = e.changedTouches[0];
+    mouse.x = (touch.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(touch.clientY / window.innerHeight) * 2 + 1;
+
+    raycaster.setFromCamera(mouse, camera);
+    const intersects = raycaster.intersectObjects(photoFrames);
+
+    if (intersects.length > 0) {
+        const photo = intersects[0].object.userData;
+        const folder = photo.category === 'sports' ? 'sports' : 'others';
+        document.getElementById('modal-image').src = `assets/photos/${folder}/${photo.id}.jpg`;
+        document.getElementById('photo-title').textContent = photo.title;
+        document.getElementById('photo-description').textContent = photo.description;
+        document.getElementById('photo-modal').classList.add('visible');
+    }
 });
 
 // Close modal
@@ -780,12 +831,6 @@ document.querySelectorAll('.nav-btn').forEach(btn => {
     btn.addEventListener('click', () => {
         moveToSection(btn.dataset.section);
     });
-});
-
-// Dropdown menu (mobile nav)
-document.getElementById('nav-dropdown').addEventListener('change', (e) => {
-    const section = e.target.value;
-    moveToSection(section);
 });
 
 // Handle window resize
@@ -849,6 +894,53 @@ const animateShootingLines = () => {
         }
     });
 };
+
+window.addEventListener('DOMContentLoaded', () => {
+    // Existing dropdown setup
+    const dropdown = document.getElementById("custom-dropdown");
+    if (dropdown) {
+        const selected = dropdown.querySelector(".dropdown-selected");
+        const options = dropdown.querySelector(".dropdown-options");
+
+        selected.addEventListener("click", () => {
+            options.style.display = options.style.display === "flex" ? "none" : "flex";
+        });
+
+        options.querySelectorAll(".dropdown-option").forEach(opt => {
+            opt.addEventListener("click", () => {
+                const section = opt.dataset.section;
+                selected.textContent = opt.textContent + " ▾";
+                options.style.display = "none";
+                moveToSection(section);
+            });
+        });
+    }
+
+    // ✅ ADD THIS INSIDE TOO
+    const nativeDropdown = document.getElementById('nav-dropdown');
+    if (nativeDropdown) {
+        nativeDropdown.addEventListener('change', (e) => {
+            const section = e.target.value;
+            moveToSection(section);
+        });
+    }
+    updateDropdownVisibility();
+});
+
+function updateDropdownVisibility() {
+    const dropdown = document.getElementById("custom-dropdown");
+    const navButtons = document.querySelector('.nav-buttons');
+
+    const isHome = currentSection === 'center';
+    const navHidden = window.getComputedStyle(navButtons).display === 'none';
+
+    if (!isHome && navHidden) {
+        dropdown.style.display = 'block';
+    } else {
+        dropdown.style.display = 'none';
+    }
+}
+
 
 // grid
 // Add grid helper (size, divisions, colorCenterLine, colorGrid)

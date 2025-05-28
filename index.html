@@ -27,14 +27,16 @@
                     <button class="nav-btn" data-section="contact" style="--i:3">Contact</button>
                     <button id="home-btn" class="nav-btn" data-section="center">Home</button>
                 </div>
-                <select id="nav-dropdown" class="nav-dropdown">
-                    <option value="" disabled selected>Menu</option>
-                    <option value="center">Home</option> <!-- ✅ Add this -->
-                    <option value="about">About</option>
-                    <option value="sports">Sports</option>
-                    <option value="other">Gallery</option>
-                    <option value="contact">Contact</option>
-                </select>
+                <div class="custom-dropdown" id="custom-dropdown">
+                <div class="dropdown-selected">Menu ▾</div>
+                <div class="dropdown-options">
+                    <div class="dropdown-option" data-section="center">Home</div>
+                    <div class="dropdown-option" data-section="about">About</div>
+                    <div class="dropdown-option" data-section="sports">Sports</div>
+                    <div class="dropdown-option" data-section="other">Gallery</div>
+                    <div class="dropdown-option" data-section="contact">Contact</div>
+                </div>
+                </div>
             </div>
         </div>
         
