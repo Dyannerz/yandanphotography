@@ -388,7 +388,6 @@ body {
 .nav-dropdown {
   display: none !important;
 }
-
 .nav-buttons.moved {
   display: flex !important;
 }
@@ -454,4 +453,8 @@ body.show-dropdown .nav-dropdown {
 
 #custom-dropdown {
   display: none; /* Hidden by default */
+}
+
+body.show-dropdown #custom-dropdown {
+  display: block !important;
 }
