@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Space Photography Portfolio</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="loading-screen">
+        <div class="loading-spinner"></div>
+        <p>Loading space gallery...</p>
+    </div>
+    
+    <div id="container">
+        <canvas id="canvas"></canvas>
+        
+        <div id="ui">
+            <div id="center-ui">
+                <h1 id="main-title">Yandan<br>Photography</h1>
+                <div class="nav-buttons">
+                    <button class="nav-btn" data-section="about" style="--i:0">About</button>
+                    <button class="nav-btn" data-section="sports" style="--i:1">Sports</button>
+                    <button class="nav-btn" data-section="other" style="--i:2">Gallery</button>
+                    <button class="nav-btn" data-section="contact" style="--i:3">Contact</button>
+                    <button id="home-btn" class="nav-btn" data-section="center">Home</button>
+                </div>
+                <select id="nav-dropdown" class="nav-dropdown">
+                    <option value="" disabled selected>Menu</option>
+                    <option value="center">Home</option> <!-- ✅ Add this -->
+                    <option value="about">About</option>
+                    <option value="sports">Sports</option>
+                    <option value="other">Gallery</option>
+                    <option value="contact">Contact</option>
+                </select>
+            </div>
+        </div>
+        
+        <div id="photo-modal">
+            <div class="modal-content">
+                <span class="close-modal">&times;</span>
+                <img id="modal-image" src="" alt="Enlarged photo">
+                <div id="photo-info">
+                    <h2 id="photo-title"></h2>
+                    <p id="photo-description"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- <div id="camera-coords" style="
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        color: white;
+        font-family: Arial;
+        background: rgba(0, 0, 0, 0.5);
+        padding: 8px;
+        border-radius: 4px;
+        z-index: 100;
+        ">
+        Camera: (0, 0, 0)
+    </div> -->
+
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.11.4/dist/gsap.min.js"></script>
+    <script type="module" src="main.js"></script>
+</body>
+</html>
