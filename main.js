@@ -304,7 +304,11 @@ const createPhotoFrames = async () => {
         let lastY = 0;
         for (let i = 0; i < photosList.length; i++) {
             const photo = photosList[i];
-            const path = `assets/photos/${folder}/${photo.id}.jpg`;
+            const thumbFolderMap = {
+                sports: 'sports-thumb',
+                other: 'others-thumb'
+            };
+            const path = `assets/photos/${thumbFolderMap[photo.category]}/${photo.id}.jpg`;
 
             await new Promise((resolve, reject) => {
                 new THREE.TextureLoader().load(path, (texture) => {
