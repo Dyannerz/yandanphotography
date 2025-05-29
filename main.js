@@ -13,6 +13,7 @@ let touchStartTime = null;
 let displayedScrollY = 0;
 let scrollVelocity = 0;
 let lastTouchTime = 0;
+let isTransitioning = false;
 
 const scene = new THREE.Scene();
 // Black Bg
@@ -628,11 +629,16 @@ const moveToSection = (section) => {
         navButtons.classList.remove('moved');
         title.classList.remove('moved');
 
-        buttons.forEach(btn => {
-            gsap.set(btn, { opacity: 0, y: 20 });
+        buttons.forEach((btn, i) => {
             btn.classList.remove('moved');
-            btn.style.display = ''; 
+            btn.style.display = '';
+            gsap.fromTo(btn,
+                { opacity: 0, y: 20 },
+                { opacity: 1, y: 0, duration: 0.5, delay: 0.1 + i * 0.05, ease: 'power2.out' }
+            );
         });
+
+        void navButtons.offsetHeight; // ✅ forces browser to recalculate layout
 
         homeBtn.style.display = 'none';
         homeBtn.classList.remove('moved');
@@ -674,6 +680,8 @@ const moveToSection = (section) => {
     })();
     
 
+    isTransitioning = true;
+
     gsap.to(camera.position, {
         x: targetX,
         y: sections[section].position[1] + scrollPosition,
@@ -692,7 +700,11 @@ const moveToSection = (section) => {
             return sections[section].position[2];
         })(),
         duration: 1.5,
-        ease: "power2.inOut"
+        ease: "power2.inOut",
+        onComplete: () => {
+            displayedScrollY = scrollPosition; // ✅ match scroll state
+            isTransitioning = false;
+        }
     });
 
     gsap.to(camera.rotation, {
@@ -967,25 +979,20 @@ const animate = () => {
     animateShootingLines();
 
     // 📱 SCROLL INTERPOLATION + INERTIA
-    if (allowScrolling) {
-        // Smooth scroll with lerp
+    if (allowScrolling && !isTransitioning) {
         displayedScrollY += (scrollPosition - displayedScrollY) * 0.1;
-
         camera.position.y = sections[currentSection].position[1] + displayedScrollY;
 
-        // Inertia after touch end
         if (!isTouchScrolling && Math.abs(scrollVelocity) > 0.01) {
             scrollPosition += scrollVelocity;
 
-            // Clamp
             if (currentSection === 'sports' || currentSection === 'other') {
                 scrollPosition = Math.max(-maxScroll[currentSection] - 1, Math.min(3, scrollPosition));
             }
 
-            // Decay velocity
-            scrollVelocity *= 0.98;
+            scrollVelocity *= 0.95;
         }
-    } else {
+    } else if (!allowScrolling) {
         displayedScrollY = 0;
     }
 
