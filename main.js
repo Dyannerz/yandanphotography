@@ -11,6 +11,8 @@
 let touchStartY = null;
 let touchStartTime = null;
 let displayedScrollY = 0;
+let scrollVelocity = 0;
+let lastTouchTime = 0;
 
 const scene = new THREE.Scene();
 // Black Bg
@@ -43,8 +45,9 @@ window.addEventListener('touchstart', (e) => {
     isTouchScrolling = true;
     if (e.touches.length === 1) {
         touchStartY = e.touches[0].clientY;
-        touchStartTime = Date.now();
         lastTouchY = touchStartY;
+        scrollVelocity = 0;
+        lastTouchTime = Date.now();
     }
 }, { passive: true });
 
@@ -53,24 +56,30 @@ window.addEventListener('touchmove', (e) => {
 
     const currentY = e.touches[0].clientY;
     const deltaY = currentY - lastTouchY;
+    const now = Date.now();
+    const timeDelta = now - lastTouchTime;
 
-    // Reverse touch scroll: swipe up = scroll up (normal is swipe up = scroll down)
+    // Update scroll position
     scrollPosition += deltaY * 0.02;
 
+    // Clamp scroll
     if (currentSection === 'sports' || currentSection === 'other') {
         scrollPosition = Math.max(-maxScroll[currentSection] - 1, Math.min(3, scrollPosition));
     }
 
-    camera.position.y = sections[currentSection].position[1] + scrollPosition;
-
+    // Track velocity
+    scrollVelocity = deltaY / Math.max(timeDelta, 1) * 0.02;
+    lastTouchTime = now;
     lastTouchY = currentY;
 }, { passive: false });
 
 window.addEventListener('touchend', () => {
     lastTouchY = null;
-    setTimeout(() => { isTouchScrolling = false }, 300); // small delay
+    // Short delay before allowing momentum to start
+    setTimeout(() => {
+        isTouchScrolling = false;
+    }, 50);
 });
-
 function calculateXToFitWall(photoHalfWidth) {
     const aspect = window.innerWidth / window.innerHeight;
     const vFovRad = camera.fov * Math.PI / 180;
@@ -952,26 +961,36 @@ function updateDropdownVisibility() {
 const animate = () => {
     requestAnimationFrame(animate);
 
-    // movement
-    // controls.update(); // required for damping
-    
-    // grid
-    // Update camera coordinates display
-    // const coordsElement = document.getElementById('camera-coords');
-    // coordsElement.textContent = 
-    //     `Camera: (${camera.position.x.toFixed(2)}, ${camera.position.y.toFixed(2)}, ${camera.position.z.toFixed(2)})`;
-    // coordsElement.textContent = 
-    // `X: ${camera.position.x.toFixed(2)}m | Y: ${camera.position.y.toFixed(2)}m | Z: ${camera.position.z.toFixed(2)}m`;
-    
-    
-    // Rest of your animation code (starfield, shooting lines, etc.)
+    // 🌠 Starfield animation
     starField.rotation.x += 0.0001;
     starField.rotation.y += 0.0001;
     animateShootingLines();
-    
+
+    // 📱 SCROLL INTERPOLATION + INERTIA
+    if (allowScrolling) {
+        // Smooth scroll with lerp
+        displayedScrollY += (scrollPosition - displayedScrollY) * 0.1;
+
+        camera.position.y = sections[currentSection].position[1] + displayedScrollY;
+
+        // Inertia after touch end
+        if (!isTouchScrolling && Math.abs(scrollVelocity) > 0.01) {
+            scrollPosition += scrollVelocity;
+
+            // Clamp
+            if (currentSection === 'sports' || currentSection === 'other') {
+                scrollPosition = Math.max(-maxScroll[currentSection] - 1, Math.min(3, scrollPosition));
+            }
+
+            // Decay velocity
+            scrollVelocity *= 0.98;
+        }
+    } else {
+        displayedScrollY = 0;
+    }
+
     renderer.render(scene, camera);
 };
-
 // Start the app
 
 const startApp = () => {
