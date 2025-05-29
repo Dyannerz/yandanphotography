@@ -10,6 +10,7 @@
 
 let touchStartY = null;
 let touchStartTime = null;
+let displayedScrollY = 0;
 
 const scene = new THREE.Scene();
 // Black Bg
@@ -36,8 +37,10 @@ function calculateXToFitFullFrame(photoWidth, photoHeight, minDistance = 12) {
 }
 
 let lastTouchY = null;
+let isTouchScrolling = false;
 
 window.addEventListener('touchstart', (e) => {
+    isTouchScrolling = true;
     if (e.touches.length === 1) {
         touchStartY = e.touches[0].clientY;
         touchStartTime = Date.now();
@@ -65,6 +68,7 @@ window.addEventListener('touchmove', (e) => {
 
 window.addEventListener('touchend', () => {
     lastTouchY = null;
+    setTimeout(() => { isTouchScrolling = false }, 300); // small delay
 });
 
 function calculateXToFitWall(photoHalfWidth) {
@@ -185,7 +189,7 @@ const createStarfield = () => {
     });
 
     const starsVertices = [];
-    for (let i = 0; i < 10000; i++) {
+    for (let i = 0; i < 3000; i++) {
         const x = (Math.random() - 0.5) * 2000;
         const y = (Math.random() - 0.5) * 2000;
         const z = (Math.random() - 0.5) * 2000;
@@ -291,93 +295,55 @@ const photos = {
 
 
 // Create photo frames with proper aspect ratios - UPDATED
-const createPhotoFrames = () => {
+const createPhotoFrames = async () => {
     const frames = [];
-    const wallOffset = 14.9;
     const frameWidth = 4;
     const spacing = 1;
 
-    // Load sports photos one by one
-    async function loadSportsSequentially() {
+    async function loadGallery(photosList, folder, xRotation, wallX, scrollKey) {
         let lastY = 0;
+        for (let i = 0; i < photosList.length; i++) {
+            const photo = photosList[i];
+            const path = `assets/photos/${folder}/${photo.id}.jpg`;
 
-        for (let i = 0; i < photos.sports.length; i++) {
-            const photo = photos.sports[i];
-            const path = `assets/photos/sports/${photo.id}.jpg`;
+            await new Promise((resolve, reject) => {
+                new THREE.TextureLoader().load(path, (texture) => {
+                    const aspectRatio = texture.image.width / texture.image.height;
+                    const height = frameWidth / aspectRatio;
 
-            const texture = await new Promise((resolve, reject) => {
-                new THREE.TextureLoader().load(path, resolve, undefined, reject);
+                    const frame = new THREE.Mesh(
+                        new THREE.PlaneGeometry(frameWidth, height),
+                        new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide, transparent: true })
+                    );
+                    frame.rotation.y = xRotation;
+                    frame.userData = photo;
+
+                    const y = i === 0 ? 0 : lastY - spacing - height / 2;
+                    frame.position.set(wallX, y, 0);
+                    lastY = y - height / 2;
+
+                    frames.push(frame);
+                    scene.add(frame);
+                    resolve(); // ✅ image fully loaded before continuing
+                }, undefined, reject);
             });
-
-            const aspectRatio = texture.image.width / texture.image.height;
-            const height = frameWidth / aspectRatio;
-
-            const frame = new THREE.Mesh(
-                new THREE.PlaneGeometry(frameWidth, height),
-                new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide, transparent: true })
-            );
-            frame.rotation.y = -Math.PI / 2;
-            frame.userData = photo;
-
-            const y = i === 0 ? 0 : lastY - spacing - height / 2;
-            frame.position.set(wallOffset, y, 0);
-            lastY = y - height / 2;
-
-            frames.push(frame);
-            scene.add(frame);
         }
 
         // Update scroll bounds
         const fovRad = camera.fov * Math.PI / 180;
-        const viewHeight = 2 * Math.tan(fovRad / 2) * sections.sports.position[2];
+        const viewHeight = 2 * Math.tan(fovRad / 2) * sections[scrollKey].position[2];
         const halfView = viewHeight / 2;
-        maxScroll.sports = -(lastY - sections.sports.position[1] + halfView);
+        maxScroll[scrollKey] = -(lastY - sections[scrollKey].position[1] + halfView);
     }
 
-    // Load others photos one by one
-    async function loadOthersSequentially() {
-        let lastY = 0;
-
-        for (let i = 0; i < photos.other.length; i++) {
-            const photo = photos.other[i];
-            const path = `assets/photos/others/${photo.id}.jpg`;
-
-            const texture = await new Promise((resolve, reject) => {
-                new THREE.TextureLoader().load(path, resolve, undefined, reject);
-            });
-
-            const aspectRatio = texture.image.width / texture.image.height;
-            const height = frameWidth / aspectRatio;
-
-            const frame = new THREE.Mesh(
-                new THREE.PlaneGeometry(frameWidth, height),
-                new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide, transparent: true })
-            );
-            frame.rotation.y = Math.PI / 2;
-            frame.userData = photo;
-
-            const y = i === 0 ? 0 : lastY - spacing - height / 2;
-            frame.position.set(-wallOffset, y, 0);
-            lastY = y - height / 2;
-
-            frames.push(frame);
-            scene.add(frame);
-        }
-
-        // Update scroll bounds
-        const fovRad = camera.fov * Math.PI / 180;
-        const viewHeight = 2 * Math.tan(fovRad / 2) * sections.other.position[2];
-        const halfView = viewHeight / 2;
-        maxScroll.other = -(lastY - sections.other.position[1] + halfView);
-    }
-
-    // Kick off both sequential loaders
-    loadSportsSequentially();
-    loadOthersSequentially();
+    // Wait for both galleries
+    await Promise.all([
+        loadGallery(photos.sports, 'sports', -Math.PI / 2, wallOffset, 'sports'),
+        loadGallery(photos.other, 'others', Math.PI / 2, -wallOffset, 'other')
+    ]);
 
     return frames;
 };
-
 
 function prewarmTextures(frames) {
     frames.forEach(frame => {
@@ -492,8 +458,13 @@ function calculateZToFitText(textHeight) {
     return Math.max(requiredZ, dynamicMinZ);
 }
 
-const photoFrames = createPhotoFrames();
-prewarmTextures(photoFrames);
+let photoFrames = [];
+
+createPhotoFrames().then((frames) => {
+    photoFrames = frames;
+    prewarmTextures(photoFrames);
+    startApp();  // <-- NEW
+});
 
 create3DTextOnWall(
     "ABOUT ME",
@@ -763,6 +734,7 @@ document.getElementById('home-btn').addEventListener('click', () => {
 
 // Handle scroll with boundaries - UPDATED
 const handleScroll = (e) => {
+    if (!allowScrolling || isTouchScrolling) return;
     if (!allowScrolling) return;
     
     const delta = -e.deltaY * 0.008;
@@ -971,6 +943,7 @@ function updateDropdownVisibility() {
 // const axesHelper = new THREE.AxesHelper(5); // Length of axes
 // scene.add(axesHelper);
 
+
 // Animation loop
 const animate = () => {
     requestAnimationFrame(animate);
@@ -996,8 +969,8 @@ const animate = () => {
 };
 
 // Start the app
-setTimeout(() => {
-    document.getElementById('loading-screen').style.display = 'none';
-}, 2000);
 
-animate();
+const startApp = () => {
+    document.getElementById('loading-screen').style.display = 'none';
+    animate();
+};
