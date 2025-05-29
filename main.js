@@ -43,13 +43,15 @@ let lastTouchY = null;
 let isTouchScrolling = false;
 
 window.addEventListener('touchstart', (e) => {
+    if (e.touches.length !== 1) return;
+
+    const touch = e.touches[0];
+    touchStartY = touch.clientY;
+    lastTouchY = touchStartY;
+    touchStartTime = Date.now();
+    lastTouchTime = Date.now();
+    scrollVelocity = 0;
     isTouchScrolling = true;
-    if (e.touches.length === 1) {
-        touchStartY = e.touches[0].clientY;
-        lastTouchY = touchStartY;
-        scrollVelocity = 0;
-        lastTouchTime = Date.now();
-    }
 }, { passive: true });
 
 window.addEventListener('touchmove', (e) => {
@@ -81,6 +83,7 @@ window.addEventListener('touchend', () => {
         isTouchScrolling = false;
     }, 50);
 });
+
 function calculateXToFitWall(photoHalfWidth) {
     const aspect = window.innerWidth / window.innerHeight;
     const vFovRad = camera.fov * Math.PI / 180;
@@ -810,20 +813,23 @@ window.addEventListener('click', (e) => {
 });
 
 window.addEventListener('touchend', (e) => {
-    if (currentSection === 'center') return;
+    lastTouchY = null;
 
     const touch = e.changedTouches[0];
     const touchEndY = touch.clientY;
     const timeDiff = Date.now() - touchStartTime;
-
     const deltaY = Math.abs(touchEndY - touchStartY);
 
-    // Consider it a tap only if:
-    const isTap = deltaY < 10 && timeDiff < 300;
+    // ✅ Updated: real tap check, tuned for mobile thumb input
+    const isTap = deltaY < 25 && timeDiff < 300;
 
-    if (!isTap) return; // skip if it's a scroll
+    setTimeout(() => {
+        isTouchScrolling = false;
+    }, 50); // momentum allowed after tap logic
 
-    // Proceed with raycasting for taps
+    if (!isTap || currentSection === 'center') return;
+
+    // 👇 Proceed with raycast + modal open
     mouse.x = (touch.clientX / window.innerWidth) * 2 - 1;
     mouse.y = -(touch.clientY / window.innerHeight) * 2 + 1;
 
@@ -832,7 +838,8 @@ window.addEventListener('touchend', (e) => {
 
     if (intersects.length > 0) {
         const photo = intersects[0].object.userData;
-        const folder = photo.category === 'sports' ? 'sports' : 'others';
+        const folderMap = { sports: 'sports', other: 'others' };
+        const folder = folderMap[photo.category] || 'others';
         document.getElementById('modal-image').src = `assets/photos/${folder}/${photo.id}.jpg`;
         document.getElementById('photo-title').textContent = photo.title;
         document.getElementById('photo-description').textContent = photo.description;
