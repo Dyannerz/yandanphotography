@@ -958,8 +958,17 @@ window.addEventListener('DOMContentLoaded', () => {
         const selected = dropdown.querySelector(".dropdown-selected");
         const options = dropdown.querySelector(".dropdown-options");
 
-        selected.addEventListener("click", () => {
+        selected.addEventListener("click", (e) => {
+            e.stopPropagation(); // ✅ prevent the canvas click/touch
             options.style.display = options.style.display === "flex" ? "none" : "flex";
+        });
+
+        // Also add touchstart/touchend to prevent touch bubbling
+        selected.addEventListener("touchstart", (e) => {
+            e.stopPropagation();
+        });
+        selected.addEventListener("touchend", (e) => {
+            e.stopPropagation();
         });
 
         options.querySelectorAll(".dropdown-option").forEach(opt => {
