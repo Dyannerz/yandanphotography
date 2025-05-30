@@ -963,11 +963,21 @@ window.addEventListener('DOMContentLoaded', () => {
         });
 
         options.querySelectorAll(".dropdown-option").forEach(opt => {
-            opt.addEventListener("click", () => {
+            opt.addEventListener("click", (e) => {
+                e.stopPropagation();  // ✅ prevent click from bubbling to window.click
+                e.preventDefault();   // ✅ optional: prevent default link behavior
                 const section = opt.dataset.section;
                 selected.textContent = opt.textContent + " ▾";
                 options.style.display = "none";
                 moveToSection(section);
+            });
+
+            // Also add touchstart/touchend for mobile
+            opt.addEventListener("touchstart", (e) => {
+                e.stopPropagation();
+            });
+            opt.addEventListener("touchend", (e) => {
+                e.stopPropagation();
             });
         });
     }
