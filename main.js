@@ -804,10 +804,24 @@ window.addEventListener('click', (e) => {
     if (intersects.length > 0) {
         const photo = intersects[0].object.userData;
         const folder = photo.category === 'sports' ? 'sports' : 'others'; // Use correct folder
-        document.getElementById('modal-image').src = `assets/photos/${folder}/${photo.id}.jpg`;
-        document.getElementById('photo-title').textContent = photo.title;
-        document.getElementById('photo-description').textContent = photo.description;
-        document.getElementById('photo-modal').classList.add('visible');
+        const modal = document.getElementById('photo-modal');
+        const modalImage = document.getElementById('modal-image');
+        const newSrc = `assets/photos/${folder}/${photo.id}.jpg`;
+
+        // Hide the current image
+        modalImage.style.opacity = '0';
+
+        // Create offscreen image to preload
+        const newImg = new Image();
+        newImg.onload = () => {
+            modalImage.src = newSrc;
+            modalImage.style.opacity = '1';
+
+            document.getElementById('photo-title').textContent = photo.title;
+            document.getElementById('photo-description').textContent = photo.description;
+            modal.classList.add('visible');
+        };
+        newImg.src = newSrc;
     }
     updateDropdownVisibility();
 });
@@ -840,10 +854,26 @@ window.addEventListener('touchend', (e) => {
         const photo = intersects[0].object.userData;
         const folderMap = { sports: 'sports', other: 'others' };
         const folder = folderMap[photo.category] || 'others';
-        document.getElementById('modal-image').src = `assets/photos/${folder}/${photo.id}.jpg`;
-        document.getElementById('photo-title').textContent = photo.title;
-        document.getElementById('photo-description').textContent = photo.description;
-        document.getElementById('photo-modal').classList.add('visible');
+
+        // Step 1: Clear the image and force redraw
+        const modal = document.getElementById('photo-modal');
+        const modalImage = document.getElementById('modal-image');
+        const newSrc = `assets/photos/${folder}/${photo.id}.jpg`;
+
+        // Hide current image
+        modalImage.style.opacity = '0';
+
+        // Preload the new image offscreen
+        const preload = new Image();
+        preload.onload = () => {
+            modalImage.src = newSrc;
+            modalImage.style.opacity = '1';
+
+            document.getElementById('photo-title').textContent = photo.title;
+            document.getElementById('photo-description').textContent = photo.description;
+            modal.classList.add('visible');
+        };
+        preload.src = newSrc;
     }
 });
 

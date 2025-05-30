@@ -458,3 +458,7 @@ body.show-dropdown .nav-dropdown {
 body.show-dropdown #custom-dropdown {
   display: block !important;
 }
+
+#modal-image {
+    transition: opacity 0.3s ease;
+}
